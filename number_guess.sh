@@ -1,14 +1,11 @@
 #!/bin/bash
 
-PSQL="psql -X --username=freecodecamp --dbname=number_guess -t --no-align -c"
-
-# START OF SCRIPT
-# prompt user for input
+PSQL="psql --username=freecodecamp --dbname=number_guess -t --no-align -c"
 
 echo -e "\nEnter your username:"
 read USERNAME
 
-# if username then check database
+# if username then check the database
 GET_USER=$($PSQL "SELECT username FROM players WHERE username = '$USERNAME'")
     # if no user
     if [[ -z $GET_USER ]]
@@ -29,12 +26,11 @@ GET_USER=$($PSQL "SELECT username FROM players WHERE username = '$USERNAME'")
       
       while IFS="|" read -r username games_played guesses; do
       # print welcome
-      echo "Welcome back, $username! You have played $games_played games, and your best game took $guesses guesses."
+      echo -e "\nWelcome back, $username! You have played $games_played games, and your best game took $guesses guesses."
       done <<< $GET_GAMES
     fi
 
 
-## START OF GAME
 GAME_RANDOM_NUMBER=$(( $RANDOM % 1000 + 1 ))
 GUESS=0
 NUM_GUESSES=1
@@ -42,37 +38,38 @@ NUM_GUESSES=1
   echo "Guess the secret number between 1 and 1000:"
   read GUESS
 
-  while [ "$GUESS" -ne "$GAME_RANDOM_NUMBER" ] 
-  do
-  # increment count
-  (( NUM_GUESSES++ ))
-  # if guess is not a number
+  # loop to prompt user to guess until correct
+until [ $GUESS -eq $GAME_RANDOM_NUMBER ]
+do
+  ((NUM_GUESSES++ ))
+  # check guess is valid/an integer
   if [[ ! $GUESS =~ ^[0-9]+$ ]]
-  then
-  echo "That is not an integer, guess again:"
-  else
-    # if GUESS is lower than random number
-    if [ "$GUESS" -lt "$GAME_RANDOM_NUMBER" ]; then
-    echo "It's higher than that, guess again:"
-    # echo and read
+    then
+      # request valid guess
+      echo -e "\nThat is not an integer, guess again:"
+      # update guess count
+    
+    # if its a valid guess
     else
-    echo "It's lower than that, guess again:"
-    # echo and read
-    fi
+      # check inequalities and give hint
+      if [ $GUESS -lt $GAME_RANDOM_NUMBER ]
+        then
+          echo "It's higher than that, guess again:"
+          # update guess count
+        else 
+          echo "It's lower than that, guess again:"
+          #update guess count
+      fi  
   fi
   read GUESS
-  done
+
+done
   
   # get user_id
   USER_ID=$($PSQL "SELECT user_id FROM players WHERE username = '$USERNAME'")
   # add guesses to DB
   ADD_NUM_GUESSES_TO_DB=$($PSQL "INSERT INTO games (user_id, guesses) VALUES($USER_ID, $NUM_GUESSES)")
-  if [[ $ADD_NUM_GUESSES_TO_DB == "INSERT 0 1" ]]
-  then
-  echo "Added $NUM_GUESSES to your scoreboard"
-  else 
-  echo "I tried adding to the db but did not work"
-  fi
+
   # increment games
   INCREMENT_GAMES_TOTAL=$($PSQL "UPDATE players SET games_played = games_played + 1 WHERE user_id = $USER_ID")
 
